@@ -16,8 +16,21 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Add MSBuild and WDK to PATH
+      - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
+
+      - name: Register WDK Visual Studio Extension & Environment
+        shell: powershell
+        run: |
+          $vsix = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\Vsix" -Recurse -Filter "WDK.vsix" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($vsix) {
+            Write-Host "Found WDK VSIX at: $($vsix.FullName)"
+            $vsixInstaller = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\VSIXInstaller.exe"
+            if (Test-Path $vsixInstaller) {
+              Start-Process -FilePath $vsixInstaller -ArgumentList "/quiet /admin $($vsix.FullName)" -Wait -NoNewWindow
+              Write-Host "WDK VSIX installed successfully."
+            }
+          }
 
       - name: Build Driver & Diagnostic App (Release x64)
         shell: powershell
@@ -26,7 +39,7 @@ jobs:
           $targetSln = if ($sln) { $sln.FullName } else { "WinEPPFilter.sln" }
 
           Write-Host "Compiling solution at: $targetSln"
-          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
+          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false /p:DriverTargetPlatform=Universal
 
       - name: Create Self-Signed Driver Package & Test Certificate
         shell: powershell
