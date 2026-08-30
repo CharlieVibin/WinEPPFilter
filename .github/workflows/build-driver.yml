@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
     - name: Checkout Repository
@@ -15,10 +15,10 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
-    
-    - name: Setup Windows Driver Kit
-      uses: microsoft/setup-wdk@v1
+
+    - name: Setup Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: Build Driver and App
       run: |
-        msbuild ./WinEPPFilter-KMDF-Driver-Project/WinEPPFilter.sln /p:Configuration=Release /p:Platform=x64
+        msbuild ./WinEPPFilter-KMDF-Driver-Project/WinEPPFilter.sln /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0.22621.0
