@@ -15,7 +15,11 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
+    
+    - name: Install Windows Driver Kit
+      run: |
+        choco install -y windows-driver-kit
 
     - name: Build Driver and App
       run: |
-        msbuild "./WinEPPFilter-KMDF-Driver-Project" /p:Configuration=Release /p:Platform=x64
+        msbuild ./WinEPPFilter-KMDF-Driver-Project/WinEPPFilter.sln /p:Configuration=Release /p:Platform=x64
