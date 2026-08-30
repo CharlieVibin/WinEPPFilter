@@ -37,7 +37,10 @@ jobs:
         shell: powershell
         run: |
           # Detect the exact installed Windows SDK on this runner (e.g. 10.0.22621.0)
-          $installedSdk = (Get-ChildItem -Path "$env:ProgramFiles(x86)\Windows Kits\10\Include" -Directory | Where-Object { $_.Name -match '^10\.' } | Sort-Object Name -Descending | Select-Object -First 1).Name
+          $progFilesX86 = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ProgramFilesX86)
+          $sdkPath = Join-Path $progFilesX86 "Windows Kits\10\Include"
+          $installedSdk = (Get-ChildItem -Path $sdkPath -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^10\.' } | Sort-Object Name -Descending | Select-Object -First 1).Name
+          if (-not $installedSdk) { $installedSdk = "10.0.22621.0" }
           Write-Host "Using Runner Installed Windows SDK: $installedSdk"
 
           $sln = Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1
