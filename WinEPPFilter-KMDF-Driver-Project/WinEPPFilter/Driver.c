@@ -59,7 +59,6 @@ WinEppFilterEvtDeviceAdd(
 
     PAGED_CODE();
 
-    // Mark driver as a generic UpperFilter
     WdfFdoInitSetFilter(DeviceInit);
 
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, DEVICE_EXTENSION);
@@ -76,15 +75,13 @@ WinEppFilterEvtDeviceAdd(
 
     KeInitializeSpinLock(&devExt->FilterSpinLock);
 
-    // Initialize Default EPP Engine State with standard Windows 6/11 curves (800 DPI default)
     EppEngine_Initialize(&devExt->EppEngine);
     devExt->Config.Dpi = 800;
-    devExt->Config.WindowsSensitivity = 10; // 6/11 default
+    devExt->Config.WindowsSensitivity = 10;
     devExt->Config.EppEnabled = TRUE;
     devExt->Config.SubpixelRemainderEnabled = TRUE;
-    devExt->Config.PassThroughToCursor = FALSE; // Direct exclusively to Virtual Raw Input
+    devExt->Config.PassThroughToCursor = FALSE;
 
-    // Configure Default I/O Queue for IOCTLs and Internal Device Controls
     WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&queueConfig, WdfIoQueueDispatchParallel);
     queueConfig.EvtIoDeviceControl = WinEppFilterEvtIoDeviceControl;
     queueConfig.EvtIoInternalDeviceControl = WinEppFilterEvtIoInternalDeviceControl;
@@ -118,14 +115,11 @@ WinEppFilterEvtIoInternalDeviceControl(
 
     switch (IoControlCode) {
     case IOCTL_INTERNAL_MOUSE_CONNECT:
-        // Intercept connection request between mouhid.sys and mouclass.sys
         status = WdfRequestRetrieveInputBuffer(Request, sizeof(CONNECT_DATA), (PVOID*)&connectData, NULL);
         if (NT_SUCCESS(status)) {
-            // Save original class service callback
             devExt->OriginalServiceCallbackTarget = connectData->ClassDeviceObject;
             devExt->OriginalServiceCallback = (PMOUSE_CLASS_SERVICE_CALLBACK)connectData->ClassService;
 
-            // Hook with our high-speed EPP transformation callback
             connectData->ClassDeviceObject = WdfDeviceWdmGetDeviceObject(device);
             connectData->ClassService = (PVOID)WinEppMouseClassServiceCallback;
 
@@ -137,7 +131,6 @@ WinEppFilterEvtIoInternalDeviceControl(
         break;
     }
 
-    // Forward request down the mouse driver stack
     WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, WDF_REQUEST_SEND_OPTION_SEND_AND_FORGET);
     if (!WdfRequestSend(Request, devExt->IoTarget, &sendOptions)) {
         status = WdfRequestGetStatus(Request);
@@ -155,20 +148,15 @@ WinEppMouseClassServiceCallback(
 {
     PDEVICE_EXTENSION devExt;
     PMOUSE_INPUT_DATA current;
-    KLOCK_QUEUE_HANDLE lockHandle;
-    LARGE_INTEGER qpcStart, qpcEnd, frequency;
+    KIRQL oldIrql;
 
-    devExt = FilterGetData(WdfGetDriverGlobals(), DeviceObject);
+    devExt = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
     if (!devExt || !devExt->OriginalServiceCallback) {
         return;
     }
 
-    KeQueryPerformanceCounter(&frequency);
-    qpcStart = KeQueryPerformanceCounter(NULL);
+    KeAcquireSpinLock(&devExt->FilterSpinLock, &oldIrql);
 
-    KeAcquireInStackQueuedSpinLock(&devExt->FilterSpinLock, &lockHandle);
-
-    // Process every incoming packet in the batch (typically 1 packet @ 2000Hz)
     for (current = InputDataStart; current < InputDataEnd; current++) {
         if (current->Flags & MOUSE_MOVE_RELATIVE) {
             LONG originalX = current->LastX;
@@ -178,7 +166,6 @@ WinEppMouseClassServiceCallback(
 
             devExt->Stats.TotalInputPackets++;
 
-            // Execute in-kernel Windows EPP calculation with sub-pixel remainder preservation
             EppEngine_ProcessPacket(
                 &devExt->EppEngine,
                 &devExt->Config,
@@ -192,18 +179,13 @@ WinEppMouseClassServiceCallback(
             devExt->Stats.LastCalculatedDeltaX = processedX;
             devExt->Stats.LastCalculatedDeltaY = processedY;
 
-            // Update packet for delivery
             current->LastX = processedX;
             current->LastY = processedY;
         }
     }
 
-    KeReleaseInStackQueuedSpinLock(&lockHandle);
+    KeReleaseSpinLock(&devExt->FilterSpinLock, oldIrql);
 
-    qpcEnd = KeQueryPerformanceCounter(NULL);
-    devExt->Stats.LastProcessingTimeUs = (ULONG)(((qpcEnd.QuadPart - qpcStart.QuadPart) * 1000000) / frequency.QuadPart);
-
-    // Invoke original class callback to dispatch transformed packets to Raw Input queue
     (*(PMOUSE_CLASS_SERVICE_CALLBACK)devExt->OriginalServiceCallback)(
         devExt->OriginalServiceCallbackTarget,
         InputDataStart,
@@ -243,12 +225,12 @@ WinEppFilterEvtIoDeviceControl(
     case IOCTL_EPP_SET_CONFIG:
         if (InputBufferLength >= sizeof(EPP_DRIVER_CONFIG)) {
             PEPP_DRIVER_CONFIG config;
+            KIRQL oldIrql;
             status = WdfRequestRetrieveInputBuffer(Request, sizeof(EPP_DRIVER_CONFIG), (PVOID*)&config, NULL);
             if (NT_SUCCESS(status)) {
-                KLOCK_QUEUE_HANDLE lockHandle;
-                KeAcquireInStackQueuedSpinLock(&devExt->FilterSpinLock, &lockHandle);
+                KeAcquireSpinLock(&devExt->FilterSpinLock, &oldIrql);
                 RtlCopyMemory(&devExt->Config, config, sizeof(EPP_DRIVER_CONFIG));
-                KeReleaseInStackQueuedSpinLock(&lockHandle);
+                KeReleaseSpinLock(&devExt->FilterSpinLock, oldIrql);
                 bytesReturned = sizeof(EPP_DRIVER_CONFIG);
             }
         } else {
@@ -259,12 +241,12 @@ WinEppFilterEvtIoDeviceControl(
     case IOCTL_EPP_GET_STATS:
         if (OutputBufferLength >= sizeof(EPP_DRIVER_STATS)) {
             PEPP_DRIVER_STATS stats;
+            KIRQL oldIrql;
             status = WdfRequestRetrieveOutputBuffer(Request, sizeof(EPP_DRIVER_STATS), (PVOID*)&stats, NULL);
             if (NT_SUCCESS(status)) {
-                KLOCK_QUEUE_HANDLE lockHandle;
-                KeAcquireInStackQueuedSpinLock(&devExt->FilterSpinLock, &lockHandle);
+                KeAcquireSpinLock(&devExt->FilterSpinLock, &oldIrql);
                 RtlCopyMemory(stats, &devExt->Stats, sizeof(EPP_DRIVER_STATS));
-                KeReleaseInStackQueuedSpinLock(&lockHandle);
+                KeReleaseSpinLock(&devExt->FilterSpinLock, oldIrql);
                 bytesReturned = sizeof(EPP_DRIVER_STATS);
             }
         } else {
