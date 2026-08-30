@@ -1,4 +1,4 @@
-name: Build Windows KMDF Driver via GitHub Actions
+name: Build Driver
 
 on:
   push:
@@ -8,38 +8,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-package:
-    name: Compile WinEPPFilter.sys & DiagnosticApp.exe
-    runs-on: windows-2022
+  build:
+    name: Build WinEPPFilter Driver
+    runs-on: windows-latest
 
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Install Windows Driver Kit (WDK)
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Install WDK Package
         shell: powershell
         run: |
-          Write-Host ">>> Step 1: Installing Official WDK via Winget..."
-          try {
-            winget install --id Microsoft.WindowsWDK.10.0.26100 --exact --source winget --accept-package-agreements --accept-source-agreements --silent
-            Write-Host "[OK] Winget WDK installed."
-          } catch {
-            Write-Host "[!] Winget install skipped or already satisfied."
-          }
-
-          Write-Host ">>> Step 2: Restoring WDK & SDK NuGet packages..."
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
-          
-          # Configure Directory.Build.props
+
           $propsXml = @'
 <Project>
   <PropertyGroup>
-    <WindowsTargetPlatformVersion Condition="'$(WindowsTargetPlatformVersion)' == ''">10.0.26100.0</WindowsTargetPlatformVersion>
-    <TargetPlatformVersion Condition="'$(TargetPlatformVersion)' == ''">10.0.26100.0</TargetPlatformVersion>
-    <WDKBinRoot Condition="Exists('$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\')">$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>
   </PropertyGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" Condition="Exists('$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props')" />
@@ -49,7 +41,6 @@ jobs:
 '@
           [System.IO.File]::WriteAllText("Directory.Build.props", $propsXml.Trim())
 
-          # Configure Directory.Build.targets
           $targetsXml = @'
 <Project>
   <ImportGroup Label="PropertySheets">
@@ -59,39 +50,31 @@ jobs:
 </Project>
 '@
           [System.IO.File]::WriteAllText("Directory.Build.targets", $targetsXml.Trim())
-          Write-Host "[OK] WDK build environment configured."
 
-      - name: Build Driver & Diagnostic App (Release x64)
+      - name: Compile Solution
         shell: powershell
         run: |
-          $sln = Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1
-          $targetSln = if ($sln) { $sln.FullName } else { "WinEPPFilter.sln" }
+          $sln = (Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1).FullName
+          if (-not $sln) { $sln = "WinEPPFilter.sln" }
+          msbuild $sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
 
-          Write-Host "Compiling solution at: $targetSln"
-          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false /v:m
-
-      - name: Create Self-Signed Driver Package & Test Certificate
+      - name: Sign Driver
         shell: powershell
         run: |
-          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test Certificate" -CertStoreLocation "Cert:\CurrentUser\My"
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test" -CertStoreLocation "Cert:\CurrentUser\My"
           $certPath = "Cert:\CurrentUser\My\" + $cert.Thumbprint
-          
-          # Find output directories and sign .sys files
-          $sysFiles = Get-ChildItem -Recurse -Filter "WinEPPFilter.sys"
-          foreach ($sys in $sysFiles) {
-            $destDir = $sys.DirectoryName
-            Export-Certificate -Cert $certPath -FilePath "$destDir\WinEPPFilter.cer"
-            Set-AuthenticodeSignature -Certificate (Get-Item $certPath) -FilePath $sys.FullName -HashAlgorithm SHA256
+          Get-ChildItem -Recurse -Filter "*.sys" | ForEach-Object {
+            Set-AuthenticodeSignature -Certificate (Get-Item $certPath) -FilePath $_.FullName -HashAlgorithm SHA256
+            Export-Certificate -Cert $certPath -FilePath (Join-Path $_.DirectoryName "WinEPPFilter.cer")
           }
 
-      - name: Upload Compiled Driver Artifacts (.sys, .inf, .cer, DiagnosticApp.exe)
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: WinEPPFilter-x64-Compiled-Package
           path: |
-            **/x64/Release/WinEPPFilter/WinEPPFilter.sys
-            **/x64/Release/WinEPPFilter/WinEPPFilter.inf
-            **/x64/Release/WinEPPFilter/WinEPPFilter.cer
-            **/x64/Release/DiagnosticApp/DiagnosticApp.exe
-            **/scripts/install.bat
-            **/scripts/uninstall.bat
+            **/x64/Release/**/*.sys
+            **/x64/Release/**/*.inf
+            **/x64/Release/**/*.cer
+            **/x64/Release/**/DiagnosticApp.exe
+            **/scripts/*.bat
