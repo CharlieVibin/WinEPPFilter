@@ -16,15 +16,8 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
     
-    - name: Install Windows Driver Kit
-      run: |
-        $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2243843"
-        $wdkInstaller = "wdk.exe"
-        Write-Host "Downloading WDK..."
-        Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller
-        Write-Host "Installing WDK..."
-        & ".\$wdkInstaller" /quiet /norestart
-        Start-Sleep -Seconds 60
+    - name: Setup Windows Driver Kit
+      uses: microsoft/setup-wdk@v1
 
     - name: Build Driver and App
       run: |
