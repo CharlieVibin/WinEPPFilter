@@ -28,7 +28,7 @@ jobs:
           Write-Host ">>> Restoring WDK and SDK via NuGet..."
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
 
-          # Generate Directory.Build.props
+          # Write Directory.Build.props
           $propsXml = @(
             '<Project>',
             '  <PropertyGroup>',
@@ -37,19 +37,18 @@ jobs:
             '    <WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>',
             '  </PropertyGroup>',
             '  <ImportGroup Label="PropertySheets">',
-            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" />',
-            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props' + "'" + ')" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props' + "'" + ')" />',
             '  </ImportGroup>',
             '</Project>'
           )
           $propsXml | Out-File -FilePath "Directory.Build.props" -Encoding utf8
 
-          # Generate Directory.Build.targets
+          # Write Directory.Build.targets
           $targetsXml = @(
             '<Project>',
             '  <ImportGroup Label="PropertySheets">',
-            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets" />',
-            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.targets" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets' + "'" + ')" />',
             '  </ImportGroup>',
             '</Project>'
           )
