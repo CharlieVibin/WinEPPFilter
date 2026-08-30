@@ -22,44 +22,34 @@ jobs:
       - name: Setup NuGet
         uses: nuget/setup-nuget@v2
 
-      - name: Download WDK & Build Solution
+      - name: Restore WDK & SDK NuGet Packages
         shell: powershell
         run: |
-          # 1. Download official Microsoft WDK 10.0.26100 package
-          nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory D:\wdk_pkg
+          # 1. Download official Microsoft WDK 10.0.26100 NuGet Package into packages folder
+          nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
           
-          # 2. Locate the unpacked WDK include & lib directories
-          $wdkPkg = Get-ChildItem -Path "D:\wdk_pkg" -Filter "Microsoft.Windows.WDK.x64*" -Directory | Select-Object -First 1
-          $wdkC = Join-Path $wdkPkg.FullName "c"
-          $incBase = Join-Path $wdkC "Include\10.0.26100.0"
-          $kmInc = Join-Path $incBase "km"
-          $sharedInc = Join-Path $incBase "shared"
-          $wdfInc = Join-Path $incBase "wdf\kmdf\1.15"
-          $crtInc = Join-Path $incBase "km\crt"
-          $libBase = Join-Path $wdkC "Lib\10.0.26100.0"
-          $kmLib = Join-Path $libBase "km\x64"
-          $wdfLib = Join-Path $libBase "wdf\kmdf\x64\1.15"
+          # 2. Automatically generate Directory.Build.props at repo root pointing MSBuild to WDK props & targets
+          $propsContent = @"
+<Project>
+  <PropertyGroup>
+    <WDKBinRoot>`$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>
+  </PropertyGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="`$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists('`$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props')" />
+  </ImportGroup>
+</Project>
+"@
+          Set-Content -Path "Directory.Build.props" -Value $propsContent
+          Write-Host "Created Directory.Build.props successfully."
 
-          Write-Host "KM Include Path: $kmInc"
-          Write-Host "KM Lib Path: $kmLib"
-
-          # 3. Locate the Solution file
+      - name: Build Driver & Diagnostic App (Release x64)
+        shell: powershell
+        run: |
           $sln = Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1
           $targetSln = if ($sln) { $sln.FullName } else { "WinEPPFilter.sln" }
 
-          # 4. Compile with MSBuild passing WDK directories
           Write-Host "Compiling solution at: $targetSln"
-          & msbuild.exe $targetSln `
-            /p:Configuration=Release `
-            /p:Platform=x64 `
-            /p:TargetVersion=Windows10 `
-            /p:DriverTargetPlatform=Universal `
-            /p:InfVerif=false `
-            /p:EnableInf2cat=false `
-            /p:TreatWarningAsError=false `
-            /p:WDKContentRoot="$wdkC\" `
-            "/p:IncludePath=$kmInc;$sharedInc;$wdfInc;$crtInc;$(Get-Content env:INCLUDE -ErrorAction SilentlyContinue)" `
-            "/p:LibraryPath=$kmLib;$wdfLib;$(Get-Content env:LIB -ErrorAction SilentlyContinue)"
+          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
 
       - name: Create Self-Signed Driver Package & Test Certificate
         shell: powershell
