@@ -19,22 +19,27 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
-
-      - name: Restore WDK & SDK NuGet Packages
+      - name: Install Windows Driver Kit (WDK)
         shell: powershell
         run: |
-          # 1. Download official Microsoft WDK 10.0.26100 NuGet Package into packages folder
+          Write-Host ">>> Step 1: Installing Official WDK via Winget..."
+          try {
+            winget install --id Microsoft.WindowsWDK.10.0.26100 --exact --source winget --accept-package-agreements --accept-source-agreements --silent
+            Write-Host "[OK] Winget WDK installed."
+          } catch {
+            Write-Host "[!] Winget install skipped or already satisfied."
+          }
+
+          Write-Host ">>> Step 2: Restoring WDK & SDK NuGet packages..."
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
           
-          # 2. Write Directory.Build.props at repo root pointing MSBuild to NuGet SDK and WDK props
+          # Configure Directory.Build.props
           $propsXml = @'
 <Project>
   <PropertyGroup>
-    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
-    <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
-    <WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>
+    <WindowsTargetPlatformVersion Condition="'$(WindowsTargetPlatformVersion)' == ''">10.0.26100.0</WindowsTargetPlatformVersion>
+    <TargetPlatformVersion Condition="'$(TargetPlatformVersion)' == ''">10.0.26100.0</TargetPlatformVersion>
+    <WDKBinRoot Condition="Exists('$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\')">$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>
   </PropertyGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" Condition="Exists('$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props')" />
@@ -44,7 +49,7 @@ jobs:
 '@
           [System.IO.File]::WriteAllText("Directory.Build.props", $propsXml.Trim())
 
-          # 3. Write Directory.Build.targets at repo root pointing MSBuild to NuGet SDK and WDK targets
+          # Configure Directory.Build.targets
           $targetsXml = @'
 <Project>
   <ImportGroup Label="PropertySheets">
@@ -54,7 +59,7 @@ jobs:
 </Project>
 '@
           [System.IO.File]::WriteAllText("Directory.Build.targets", $targetsXml.Trim())
-          Write-Host "Created Directory.Build.props and Directory.Build.targets successfully."
+          Write-Host "[OK] WDK build environment configured."
 
       - name: Build Driver & Diagnostic App (Release x64)
         shell: powershell
@@ -63,7 +68,7 @@ jobs:
           $targetSln = if ($sln) { $sln.FullName } else { "WinEPPFilter.sln" }
 
           Write-Host "Compiling solution at: $targetSln"
-          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
+          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false /v:m
 
       - name: Create Self-Signed Driver Package & Test Certificate
         shell: powershell
