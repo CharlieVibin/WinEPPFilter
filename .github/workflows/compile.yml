@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-package:
     name: Compile WinEPPFilter.sys & DiagnosticApp.exe
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout Source Code
@@ -19,16 +19,34 @@ jobs:
       - name: Add MSBuild and WDK to PATH
         uses: microsoft/setup-msbuild@v2
 
-      - name: Build Driver (Release x64)
+      - name: Build Driver & Diagnostic App (Release x64)
         shell: powershell
         run: |
+          # Discover latest Windows Kits 10 SDK & KM include directory
+          $kitsRoot = "${env:ProgramFiles(x86)}\Windows Kits\10"
+          $latestInc = Get-ChildItem -Path "$kitsRoot\Include" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          $kmInc = "$($latestInc.FullName)\km"
+          $sharedInc = "$($latestInc.FullName)\shared"
+          $ucrtInc = "$($latestInc.FullName)\ucrt"
+          $latestLib = Get-ChildItem -Path "$kitsRoot\Lib" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          $kmLib = "$($latestLib.FullName)\km\x64"
+
+          Write-Host "Found SDK KM Include: $kmInc"
+          Write-Host "Found SDK KM Lib: $kmLib"
+
           $sln = Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1
-          if ($sln) {
-            Write-Host "Compiling solution at: $($sln.FullName)"
-            msbuild $sln.FullName /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
-          } else {
-            msbuild WinEPPFilter.sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
-          }
+          $targetSln = if ($sln) { $sln.FullName } else { "WinEPPFilter.sln" }
+
+          Write-Host "Compiling solution at: $targetSln"
+          msbuild $targetSln `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:TargetVersion="Windows10" `
+            /p:InfVerif=false `
+            /p:EnableInf2cat=false `
+            /p:TreatWarningAsError=false `
+            /p:IncludePath="$kmInc;$sharedInc;$ucrtInc;${env:INCLUDE}" `
+            /p:LibraryPath="$kmLib;${env:LIB}"
 
       - name: Create Self-Signed Driver Package & Test Certificate
         shell: powershell
