@@ -28,13 +28,13 @@ jobs:
         Write-Host "Installing Windows 11 SDK..."
         winget install Microsoft.WindowsSDK.10.0.22621 -h --accept-source-agreements --accept-package-agreements
         
-        $sdkPath = "C:\Program Files (x86)\Windows Kits\10"
+        $sdkPath = "C:\\Program Files (x86)\\Windows Kits\\10"
         if (Test-Path $sdkPath) {
           Write-Host "✓ Windows SDK installed successfully at: $sdkPath"
-          Get-ChildItem "$sdkPath\Include" | Select-Object Name
+          Get-ChildItem "$sdkPath\\Include" | Select-Object Name
         } else {
           Write-Host "⚠ SDK path not found, checking alternative paths..."
-          Get-ChildItem "C:\Program Files (x86)\Windows Kits\" -ErrorAction SilentlyContinue | Select-Object Name
+          Get-ChildItem "C:\\Program Files (x86)\\Windows Kits\\" -ErrorAction SilentlyContinue | Select-Object Name
         }
 
     - name: Install Windows Driver Kit (WDK)
@@ -44,16 +44,16 @@ jobs:
         
         winget install Microsoft.WindowsDriverKit.10.0.22621 -h --accept-source-agreements --accept-package-agreements
         
-        $wdkPath = "C:\Program Files (x86)\Windows Kits\10"
+        $wdkPath = "C:\\Program Files (x86)\\Windows Kits\\10"
         if (Test-Path $wdkPath) {
           Write-Host "✓ WDK installed successfully"
           
-          $ntddkPath = "$wdkPath\Include\10.0.22621.0\km\ntddk.h"
+          $ntddkPath = "$wdkPath\\Include\\10.0.22621.0\\km\\ntddk.h"
           if (Test-Path $ntddkPath) {
             Write-Host "✓ ntddk.h found at: $ntddkPath"
           } else {
             Write-Host "Searching for ntddk.h..."
-            Get-ChildItem "$wdkPath\Include" -Recurse -Filter "ntddk.h" -ErrorAction SilentlyContinue | ForEach-Object {
+            Get-ChildItem "$wdkPath\\Include" -Recurse -Filter "ntddk.h" -ErrorAction SilentlyContinue | ForEach-Object {
               Write-Host "  Found: $($_.FullName)"
             }
           }
@@ -75,7 +75,7 @@ jobs:
           exit 1
         }
         
-        $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+        $vsPath = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise"
         if (Test-Path $vsPath) {
           Write-Host "✓ Visual Studio 2022 Enterprise found"
         } else {
@@ -83,10 +83,10 @@ jobs:
           exit 1
         }
         
-        $wdkPath = "C:\Program Files (x86)\Windows Kits\10"
-        if (Test-Path "$wdkPath\Include") {
+        $wdkPath = "C:\\Program Files (x86)\\Windows Kits\\10"
+        if (Test-Path "$wdkPath\\Include") {
           Write-Host "✓ Windows Kits found"
-          Get-ChildItem "$wdkPath\Include" | ForEach-Object {
+          Get-ChildItem "$wdkPath\\Include" | ForEach-Object {
             Write-Host "  - $_"
           }
         }
@@ -96,8 +96,8 @@ jobs:
       run: |
         Write-Host "Setting environment variables..."
         
-        $wdkPath = "C:\Program Files (x86)\Windows Kits\10"
-        $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+        $wdkPath = "C:\\Program Files (x86)\\Windows Kits\\10"
+        $vsPath = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise"
         
         [Environment]::SetEnvironmentVariable("WindowsSDKVersion", "10.0.22621.0", "Process")
         [Environment]::SetEnvironmentVariable("KIT_ROOT", $wdkPath, "Process")
@@ -159,6 +159,7 @@ jobs:
         retention-days: 30
 
     - name: Build Summary
+      if: success()
       shell: powershell
       run: |
         Write-Host "========================================="
