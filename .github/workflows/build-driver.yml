@@ -18,7 +18,13 @@ jobs:
     
     - name: Install Windows Driver Kit
       run: |
-        choco install -y windows-driver-kit
+        $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2243843"
+        $wdkInstaller = "wdk.exe"
+        Write-Host "Downloading WDK..."
+        Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller
+        Write-Host "Installing WDK..."
+        & ".\$wdkInstaller" /quiet /norestart
+        Start-Sleep -Seconds 60
 
     - name: Build Driver and App
       run: |
