@@ -22,31 +22,44 @@ jobs:
       - name: Setup NuGet
         uses: nuget/setup-nuget@v2
 
-      - name: Download & Link Official WDK Kernel Headers (ntddk.h, wdf.h)
+      - name: Download WDK & Build Solution
         shell: powershell
         run: |
-          # Install official WDK package via NuGet
+          # 1. Download official Microsoft WDK 10.0.26100 package
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory D:\wdk_pkg
           
-          $wdkInc = Get-ChildItem -Path "D:\wdk_pkg" -Recurse -Filter "ntddk.h" | Select-Object -First 1
-          if ($wdkInc) {
-            $kmDir = $wdkInc.Directory.FullName
-            $sharedDir = (Join-Path (Split-Path $kmDir -Parent) "shared")
-            $wdfDir = (Join-Path (Split-Path $kmDir -Parent) "wdf")
-            Write-Host "Found ntddk.h at: $kmDir"
-            
-            # Export to GitHub Actions environment so MSBuild sees them
-            echo "INCLUDE=$kmDir;$sharedDir;$wdfDir;${env:INCLUDE}" >> $env:GITHUB_ENV
-          }
+          # 2. Locate the unpacked WDK include & lib directories
+          $wdkPkg = Get-ChildItem -Path "D:\wdk_pkg" -Filter "Microsoft.Windows.WDK.x64*" -Directory | Select-Object -First 1
+          $wdkC = Join-Path $wdkPkg.FullName "c"
+          $incBase = Join-Path $wdkC "Include\10.0.26100.0"
+          $kmInc = Join-Path $incBase "km"
+          $sharedInc = Join-Path $incBase "shared"
+          $wdfInc = Join-Path $incBase "wdf\kmdf\1.15"
+          $crtInc = Join-Path $incBase "km\crt"
+          $libBase = Join-Path $wdkC "Lib\10.0.26100.0"
+          $kmLib = Join-Path $libBase "km\x64"
+          $wdfLib = Join-Path $libBase "wdf\kmdf\x64\1.15"
 
-      - name: Build Driver & Diagnostic App (Release x64)
-        shell: powershell
-        run: |
+          Write-Host "KM Include Path: $kmInc"
+          Write-Host "KM Lib Path: $kmLib"
+
+          # 3. Locate the Solution file
           $sln = Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1
           $targetSln = if ($sln) { $sln.FullName } else { "WinEPPFilter.sln" }
 
+          # 4. Compile with MSBuild passing WDK directories
           Write-Host "Compiling solution at: $targetSln"
-          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false /p:DriverTargetPlatform=Universal
+          & msbuild.exe $targetSln `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:TargetVersion=Windows10 `
+            /p:DriverTargetPlatform=Universal `
+            /p:InfVerif=false `
+            /p:EnableInf2cat=false `
+            /p:TreatWarningAsError=false `
+            /p:WDKContentRoot="$wdkC\" `
+            "/p:IncludePath=$kmInc;$sharedInc;$wdfInc;$crtInc;$(Get-Content env:INCLUDE -ErrorAction SilentlyContinue)" `
+            "/p:LibraryPath=$kmLib;$wdfLib;$(Get-Content env:LIB -ErrorAction SilentlyContinue)"
 
       - name: Create Self-Signed Driver Package & Test Certificate
         shell: powershell
@@ -54,7 +67,7 @@ jobs:
           $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test Certificate" -CertStoreLocation "Cert:\CurrentUser\My"
           $certPath = "Cert:\CurrentUser\My\" + $cert.Thumbprint
           
-          # Find output directories
+          # Find output directories and sign .sys files
           $sysFiles = Get-ChildItem -Recurse -Filter "WinEPPFilter.sys"
           foreach ($sys in $sysFiles) {
             $destDir = $sys.DirectoryName
