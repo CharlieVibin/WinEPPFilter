@@ -1,128 +1,85 @@
-Download action repository 'nuget/setup-nuget@v2' (SHA:d105a947828025cd7a980103c35ba2bfae586d0f)
-Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
-Complete job name: Build WinEPPFilter Driver
-4s
-Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-Run actions/checkout@v4
-Syncing repository: CharlieVibin/WinEPPFilter
-Getting Git version info
-  Working directory is 'D:\a\WinEPPFilter\WinEPPFilter'
-  "C:\Program Files\Git\bin\git.exe" version
-  git version 2.55.0.windows.5
-Temporarily overriding HOME='D:\a\_temp\edaa8ebe-643e-445a-8894-42027c902ebf' before making global git config changes
-Adding repository directory to the temporary git global config as a safe directory
-"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\WinEPPFilter\WinEPPFilter
-Deleting the contents of 'D:\a\WinEPPFilter\WinEPPFilter'
-Initializing the repository
-Disabling automatic garbage collection
-Setting up auth
-  "C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
-  "C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
-  "C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-  "C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
-  "C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
-  "C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
-  "C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
-Fetching the repository
-  "C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +1d34232f4bae3eb50592b651b784e29c232ae5bc:refs/remotes/origin/main
-  From https://github.com/CharlieVibin/WinEPPFilter
-   * [new ref]         1d34232f4bae3eb50592b651b784e29c232ae5bc -> origin/main
-Determining the checkout info
-"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
-"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
-Checking out the ref
-  "C:\Program Files\Git\bin\git.exe" checkout --progress --force -B main refs/remotes/origin/main
-  Switched to a new branch 'main'
-  branch 'main' set up to track 'origin/main'.
-"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
-1d34232f4bae3eb50592b651b784e29c232ae5bc
-1s
-Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-Run microsoft/setup-msbuild@v2
-  
-C:\ProgramData\Chocolatey\bin\vswhere.exe -products * -requires Microsoft.Component.MSBuild -property installationPath -latest
-C:\Program Files\Microsoft Visual Studio\2022\Enterprise
-0s
-Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-Run nuget/setup-nuget@v2
-  
-(node:4244) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
-(Use `node --trace-deprecation ...` to show where the warning was created)
-Installed nuget.exe version 7.9.0
-1m 9s
-Run Write-Host ">>> Restoring WDK and SDK via NuGet..."
-  
->>> Restoring WDK and SDK via NuGet...
-Feeds used:
-  https://api.nuget.org/v3/index.json
-  C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
-Attempting to gather dependency information for package 'Microsoft.Windows.WDK.x64.10.0.26100.2454' with respect to project 'D:\a\WinEPPFilter\WinEPPFilter\packages', targeting 'Any,Version=v0.0'
-Gathering dependency information took 685 ms
-Attempting to resolve dependencies for package 'Microsoft.Windows.WDK.x64.10.0.26100.2454' with DependencyBehavior 'Lowest'
-Resolving dependency information took 0 ms
-Resolving actions to install package 'Microsoft.Windows.WDK.x64.10.0.26100.2454'
-Resolved actions to install package 'Microsoft.Windows.WDK.x64.10.0.26100.2454'
-Retrieving package 'Microsoft.Windows.SDK.cpp 10.0.26100.2454' from 'nuget.org'.
-Retrieving package 'Microsoft.Windows.SDK.cpp.x64 10.0.26100.2454' from 'nuget.org'.
-Retrieving package 'Microsoft.Windows.WDK.x64 10.0.26100.2454' from 'nuget.org'.
-  GET https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp/10.0.26100.2454/microsoft.windows.sdk.cpp.10.0.26100.2454.nupkg
-  GET https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.x64/10.0.26100.2454/microsoft.windows.sdk.cpp.x64.10.0.26100.2454.nupkg
-  GET https://api.nuget.org/v3-flatcontainer/microsoft.windows.wdk.x64/10.0.26100.2454/microsoft.windows.wdk.x64.10.0.26100.2454.nupkg
-  OK https://api.nuget.org/v3-flatcontainer/microsoft.windows.wdk.x64/10.0.26100.2454/microsoft.windows.wdk.x64.10.0.26100.2454.nupkg 198ms
-  OK https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp/10.0.26100.2454/microsoft.windows.sdk.cpp.10.0.26100.2454.nupkg 204ms
-  OK https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.x64/10.0.26100.2454/microsoft.windows.sdk.cpp.x64.10.0.26100.2454.nupkg 240ms
-Installed Microsoft.Windows.SDK.cpp.x64 10.0.26100.2454 from https://api.nuget.org/v3/index.json to C:\Users\runneradmin\.nuget\packages\microsoft.windows.sdk.cpp.x64\10.0.26100.2454 with content hash Vca1vfEgDpQf3eqzAbm2oZwssV4IKab3ERA/9x7dlpb/edccUerLMSDJCZWGXdsIw7mDEaSffhxK3ol/PtOhyg==.
-Installed Microsoft.Windows.WDK.x64 10.0.26100.2454 from https://api.nuget.org/v3/index.json to C:\Users\runneradmin\.nuget\packages\microsoft.windows.wdk.x64\10.0.26100.2454 with content hash qeVL585WJBWLiLQKdVsRtpBI9RWFjAh5XxtjmgzoT5BHZ4ySaLBebIXUVcMrFvvbSRHF9la/0Vwq5N/dwuE4Pg==.
-Installed Microsoft.Windows.SDK.cpp 10.0.26100.2454 from https://api.nuget.org/v3/index.json to C:\Users\runneradmin\.nuget\packages\microsoft.windows.sdk.cpp\10.0.26100.2454 with content hash lDe+Y+HRdOLooeeET4Nl7niIkI2DPtL2BoHrTxm1S927AsHa81ZoGsqt5dH1jVxDP8PvJxZF7N9/YttnpKzt4w==.
-Adding package 'Microsoft.Windows.SDK.CPP.10.0.26100.2454' to folder 'D:\a\WinEPPFilter\WinEPPFilter\packages'
-Added package 'Microsoft.Windows.SDK.CPP.10.0.26100.2454' to folder 'D:\a\WinEPPFilter\WinEPPFilter\packages'
-Successfully installed 'Microsoft.Windows.SDK.cpp 10.0.26100.2454' to D:\a\WinEPPFilter\WinEPPFilter\packages
-Adding package 'Microsoft.Windows.SDK.CPP.x64.10.0.26100.2454' to folder 'D:\a\WinEPPFilter\WinEPPFilter\packages'
-Added package 'Microsoft.Windows.SDK.CPP.x64.10.0.26100.2454' to folder 'D:\a\WinEPPFilter\WinEPPFilter\packages'
-Successfully installed 'Microsoft.Windows.SDK.cpp.x64 10.0.26100.2454' to D:\a\WinEPPFilter\WinEPPFilter\packages
-Adding package 'Microsoft.Windows.WDK.x64.10.0.26100.2454' to folder 'D:\a\WinEPPFilter\WinEPPFilter\packages'
-Added package 'Microsoft.Windows.WDK.x64.10.0.26100.2454' to folder 'D:\a\WinEPPFilter\WinEPPFilter\packages'
-Successfully installed 'Microsoft.Windows.WDK.x64 10.0.26100.2454' to D:\a\WinEPPFilter\WinEPPFilter\packages
-Executing nuget actions took 1.03 min
-[OK] WDK build environment configured successfully.
-18s
-Run $sln = (Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1).FullName
-  
-Compiling solution at: D:\a\WinEPPFilter\WinEPPFilter\WinEPPFilter.sln
-MSBuild version 17.14.51+25f168cee for .NET Framework
-  Building 'WinEPPFilter' with toolset 'WindowsKernelModeDriver10.0' and the 'Universal' target platform.
-  Driver.c
-  EppEngine.c
-  Generating Code...
-D:\a\WinEPPFilter\WinEPPFilter\WinEPPFilter\Driver.h(21,10): error C1083: Cannot open include file: 'ntddk.h': No such file or directory [D:\a\WinEPPFilter\WinEPPFilter\WinEPPFilter\WinEPPFilter.vcxproj]
-  (compiling source file 'Driver.c')
-  
-D:\a\WinEPPFilter\WinEPPFilter\WinEPPFilter\EppEngine.h(17,10): error C1083: Cannot open include file: 'ntddk.h': No such file or directory [D:\a\WinEPPFilter\WinEPPFilter\WinEPPFilter\WinEPPFilter.vcxproj]
-  (compiling source file 'EppEngine.c')
-  
-  DiagnosticApp.cpp
-D:\a\WinEPPFilter\WinEPPFilter\DiagnosticApp\DiagnosticApp.cpp(72,40): warning C4245: 'argument': conversion from 'int' to 'DWORD', signed/unsigned mismatch [D:\a\WinEPPFilter\WinEPPFilter\DiagnosticApp\DiagnosticApp.vcxproj]
-LINK : fatal error LNK1181: cannot open input file 'kernel32.lib' [D:\a\WinEPPFilter\WinEPPFilter\DiagnosticApp\DiagnosticApp.vcxproj]
-Error: Process completed with exit code 1.
-0s
-0s
-2s
-Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-Post job cleanup.
-"C:\Program Files\Git\bin\git.exe" version
-git version 2.55.0.windows.5
-Temporarily overriding HOME='D:\a\_temp\3774963c-6404-4af8-81a7-e7778aeb45ff' before making global git config changes
-Adding repository directory to the temporary git global config as a safe directory
-"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\WinEPPFilter\WinEPPFilter
-"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
-"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
-"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-http.https://github.com/.extraheader
-"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
-"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
-"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
-"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
-0s
-Cleaning up orphan processes
-Terminate orphan process: pid (5172) (vctip)
-Warning: Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, microsoft/setup-msbuild@v2, nuget/setup-nuget@v2. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+name: Build Windows KMDF Driver
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build WinEPPFilter Driver
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Download WDK and Configure MSBuild
+        shell: powershell
+        run: |
+          Write-Host ">>> Restoring WDK and SDK via NuGet..."
+          nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
+
+          # Write Directory.Build.props
+          $propsXml = @(
+            '<Project>',
+            '  <PropertyGroup>',
+            '    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>',
+            '    <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>',
+            '    <WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>',
+            '  </PropertyGroup>',
+            '  <ImportGroup Label="PropertySheets">',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props' + "'" + ')" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props' + "'" + ')" />',
+            '  </ImportGroup>',
+            '</Project>'
+          )
+          $propsXml | Out-File -FilePath "Directory.Build.props" -Encoding utf8
+
+          # Write Directory.Build.targets
+          $targetsXml = @(
+            '<Project>',
+            '  <ImportGroup Label="PropertySheets">',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets' + "'" + ')" />',
+            '  </ImportGroup>',
+            '</Project>'
+          )
+          $targetsXml | Out-File -FilePath "Directory.Build.targets" -Encoding utf8
+          Write-Host "[OK] WDK build environment configured successfully."
+
+      - name: Compile Solution (Release x64)
+        shell: powershell
+        run: |
+          $sln = (Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1).FullName
+          if (-not $sln) { $sln = "WinEPPFilter.sln" }
+          Write-Host "Compiling solution at: $sln"
+          msbuild $sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false /v:m
+
+      - name: Sign Driver with Test Certificate
+        shell: powershell
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test Certificate" -CertStoreLocation "Cert:\CurrentUser\My"
+          $certPath = "Cert:\CurrentUser\My\" + $cert.Thumbprint
+          Get-ChildItem -Recurse -Filter "*.sys" | ForEach-Object {
+            Set-AuthenticodeSignature -Certificate (Get-Item $certPath) -FilePath $_.FullName -HashAlgorithm SHA256
+            Export-Certificate -Cert $certPath -FilePath (Join-Path $_.DirectoryName "WinEPPFilter.cer")
+          }
+
+      - name: Upload Compiled Driver Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinEPPFilter-x64-Compiled-Package
+          path: |
+            **/x64/Release/**/*.sys
+            **/x64/Release/**/*.inf
+            **/x64/Release/**/*.cer
+            **/x64/Release/**/DiagnosticApp.exe
+            **/scripts/*.bat
