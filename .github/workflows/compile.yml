@@ -28,18 +28,9 @@ jobs:
           # 1. Download official Microsoft WDK 10.0.26100 NuGet Package into packages folder
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
           
-          # 2. Automatically generate Directory.Build.props at repo root pointing MSBuild to WDK props & targets
-          $propsContent = @"
-<Project>
-  <PropertyGroup>
-    <WDKBinRoot>`$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>
-  </PropertyGroup>
-  <ImportGroup Label="PropertySheets">
-    <Import Project="`$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists('`$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props')" />
-  </ImportGroup>
-</Project>
-"@
-          Set-Content -Path "Directory.Build.props" -Value $propsContent
+          # 2. Write Directory.Build.props at repo root pointing MSBuild to WDK props & targets
+          $propsXml = '<Project><PropertyGroup><WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot></PropertyGroup><ImportGroup Label="PropertySheets"><Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists(' + "'`$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props'" + ')" /></ImportGroup></Project>'
+          [System.IO.File]::WriteAllText("Directory.Build.props", $propsXml)
           Write-Host "Created Directory.Build.props successfully."
 
       - name: Build Driver & Diagnostic App (Release x64)
