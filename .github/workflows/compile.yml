@@ -34,6 +34,7 @@ jobs:
           $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test Certificate" -CertStoreLocation "Cert:\CurrentUser\My"
           $certPath = "Cert:\CurrentUser\My\" + $cert.Thumbprint
           
+          # Find output directories
           $sysFiles = Get-ChildItem -Recurse -Filter "WinEPPFilter.sys"
           foreach ($sys in $sysFiles) {
             $destDir = $sys.DirectoryName
