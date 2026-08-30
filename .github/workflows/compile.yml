@@ -1,4 +1,4 @@
-name: Build Driver
+name: Build Windows KMDF Driver
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build WinEPPFilter Driver
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout Repository
@@ -27,36 +27,39 @@ jobs:
         run: |
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
 
-          $propsXml = @'
-<Project>
-  <PropertyGroup>
-    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
-    <WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>
-  </PropertyGroup>
-  <ImportGroup Label="PropertySheets">
-    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" Condition="Exists('$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props')" />
-    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists('$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props')" />
-  </ImportGroup>
-</Project>
-'@
-          [System.IO.File]::WriteAllText("Directory.Build.props", $propsXml.Trim())
+          $props = @(
+            '<Project>',
+            '  <PropertyGroup>',
+            '    <WindowsTargetPlatformVersion Condition="' + "'" + '$(WindowsTargetPlatformVersion)' + "''" + '">10.0.26100.0</WindowsTargetPlatformVersion>',
+            '    <TargetPlatformVersion Condition="' + "'" + '$(TargetPlatformVersion)' + "''" + '">10.0.26100.0</TargetPlatformVersion>',
+            '    <WDKBinRoot Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\' + "'" + ')">$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>',
+            '  </PropertyGroup>',
+            '  <ImportGroup Label="PropertySheets">',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props' + "'" + ')" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props' + "'" + ')" />',
+            '  </ImportGroup>',
+            '</Project>'
+          )
+          $props | Set-Content "Directory.Build.props"
 
-          $targetsXml = @'
-<Project>
-  <ImportGroup Label="PropertySheets">
-    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets" Condition="Exists('$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets')" />
-    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.targets" Condition="Exists('$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.targets')" />
-  </ImportGroup>
-</Project>
-'@
-          [System.IO.File]::WriteAllText("Directory.Build.targets", $targetsXml.Trim())
+          $targets = @(
+            '<Project>',
+            '  <ImportGroup Label="PropertySheets">',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets' + "'" + ')" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.targets" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.targets' + "'" + ')" />',
+            '  </ImportGroup>',
+            '</Project>'
+          )
+          $targets | Set-Content "Directory.Build.targets"
+          Write-Host "WDK props and targets created successfully."
 
       - name: Compile Solution
         shell: powershell
         run: |
           $sln = (Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1).FullName
           if (-not $sln) { $sln = "WinEPPFilter.sln" }
-          msbuild $sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
+          Write-Host "Building $sln..."
+          msbuild $sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false /v:m
 
       - name: Sign Driver
         shell: powershell
