@@ -29,18 +29,22 @@ jobs:
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
           
           # 2. Write Directory.Build.props at repo root pointing MSBuild to WDK props & targets
-          $propsXml = '<Project><PropertyGroup><WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot></PropertyGroup><ImportGroup Label="PropertySheets"><Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists(' + "'`$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props'" + ')" /></ImportGroup></Project>'
+          $propsXml = '<Project><PropertyGroup><WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot></PropertyGroup><ImportGroup Label="PropertySheets"><Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists(' + "''$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props''" + ')" /></ImportGroup></Project>'
           [System.IO.File]::WriteAllText("Directory.Build.props", $propsXml)
           Write-Host "Created Directory.Build.props successfully."
 
       - name: Build Driver & Diagnostic App (Release x64)
         shell: powershell
         run: |
+          # Detect the exact installed Windows SDK on this runner (e.g. 10.0.22621.0)
+          $installedSdk = (Get-ChildItem -Path "$env:ProgramFiles(x86)\Windows Kits\10\Include" -Directory | Where-Object { $_.Name -match '^10\.' } | Sort-Object Name -Descending | Select-Object -First 1).Name
+          Write-Host "Using Runner Installed Windows SDK: $installedSdk"
+
           $sln = Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1
           $targetSln = if ($sln) { $sln.FullName } else { "WinEPPFilter.sln" }
 
           Write-Host "Compiling solution at: $targetSln"
-          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
+          msbuild $targetSln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:WindowsTargetPlatformVersion=$installedSdk /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
 
       - name: Create Self-Signed Driver Package & Test Certificate
         shell: powershell
