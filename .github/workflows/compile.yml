@@ -22,56 +22,59 @@ jobs:
       - name: Setup NuGet
         uses: nuget/setup-nuget@v2
 
-      - name: Install WDK Package
+      - name: Download WDK and Configure MSBuild
         shell: powershell
         run: |
+          Write-Host ">>> Restoring WDK and SDK via NuGet..."
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
 
-          $props = @(
+          # Generate Directory.Build.props
+          $propsXml = @(
             '<Project>',
             '  <PropertyGroup>',
-            '    <WindowsTargetPlatformVersion Condition="' + "'" + '$(WindowsTargetPlatformVersion)' + "''" + '">10.0.26100.0</WindowsTargetPlatformVersion>',
-            '    <TargetPlatformVersion Condition="' + "'" + '$(TargetPlatformVersion)' + "''" + '">10.0.26100.0</TargetPlatformVersion>',
-            '    <WDKBinRoot Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\' + "'" + ')">$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>',
+            '    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>',
+            '    <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>',
+            '    <WDKBinRoot>$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\c\bin\</WDKBinRoot>',
             '  </PropertyGroup>',
             '  <ImportGroup Label="PropertySheets">',
-            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props' + "'" + ')" />',
-            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props' + "'" + ')" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.props" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.props" />',
             '  </ImportGroup>',
             '</Project>'
           )
-          $props | Set-Content "Directory.Build.props"
+          $propsXml | Out-File -FilePath "Directory.Build.props" -Encoding utf8
 
-          $targets = @(
+          # Generate Directory.Build.targets
+          $targetsXml = @(
             '<Project>',
             '  <ImportGroup Label="PropertySheets">',
-            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets' + "'" + ')" />',
-            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.targets" Condition="Exists(' + "'" + '$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.targets' + "'" + ')" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.SDK.cpp.10.0.26100.2454\build\native\Microsoft.Windows.SDK.cpp.targets" />',
+            '    <Import Project="$(MSBuildThisFileDirectory)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\Microsoft.Windows.WDK.x64.targets" />',
             '  </ImportGroup>',
             '</Project>'
           )
-          $targets | Set-Content "Directory.Build.targets"
-          Write-Host "WDK props and targets created successfully."
+          $targetsXml | Out-File -FilePath "Directory.Build.targets" -Encoding utf8
+          Write-Host "[OK] WDK build environment configured successfully."
 
-      - name: Compile Solution
+      - name: Compile Solution (Release x64)
         shell: powershell
         run: |
           $sln = (Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1).FullName
           if (-not $sln) { $sln = "WinEPPFilter.sln" }
-          Write-Host "Building $sln..."
+          Write-Host "Compiling solution at: $sln"
           msbuild $sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion=Windows10 /p:DriverTargetPlatform=Universal /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false /v:m
 
-      - name: Sign Driver
+      - name: Sign Driver with Test Certificate
         shell: powershell
         run: |
-          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test" -CertStoreLocation "Cert:\CurrentUser\My"
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test Certificate" -CertStoreLocation "Cert:\CurrentUser\My"
           $certPath = "Cert:\CurrentUser\My\" + $cert.Thumbprint
           Get-ChildItem -Recurse -Filter "*.sys" | ForEach-Object {
             Set-AuthenticodeSignature -Certificate (Get-Item $certPath) -FilePath $_.FullName -HashAlgorithm SHA256
             Export-Certificate -Cert $certPath -FilePath (Join-Path $_.DirectoryName "WinEPPFilter.cer")
           }
 
-      - name: Upload Artifacts
+      - name: Upload Compiled Driver Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: WinEPPFilter-x64-Compiled-Package
