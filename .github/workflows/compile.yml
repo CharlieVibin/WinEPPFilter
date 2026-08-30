@@ -1,0 +1,57 @@
+name: Build Windows KMDF Driver via GitHub Actions
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-package:
+    name: Compile WinEPPFilter.sys & DiagnosticApp.exe
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild and WDK to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Driver (Release x64)
+        shell: powershell
+        run: |
+          $sln = Get-ChildItem -Recurse -Filter "WinEPPFilter.sln" | Select-Object -First 1
+          if ($sln) {
+            Write-Host "Compiling solution at: $($sln.FullName)"
+            msbuild $sln.FullName /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
+          } else {
+            msbuild WinEPPFilter.sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:InfVerif=false /p:EnableInf2cat=false /p:TreatWarningAsError=false
+          }
+
+      - name: Create Self-Signed Driver Package & Test Certificate
+        shell: powershell
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test Certificate" -CertStoreLocation "Cert:\CurrentUser\My"
+          $certPath = "Cert:\CurrentUser\My\" + $cert.Thumbprint
+          
+          # Find output directories
+          $sysFiles = Get-ChildItem -Recurse -Filter "WinEPPFilter.sys"
+          foreach ($sys in $sysFiles) {
+            $destDir = $sys.DirectoryName
+            Export-Certificate -Cert $certPath -FilePath "$destDir\WinEPPFilter.cer"
+            Set-AuthenticodeSignature -Certificate (Get-Item $certPath) -FilePath $sys.FullName -HashAlgorithm SHA256
+          }
+
+      - name: Upload Compiled Driver Artifacts (.sys, .inf, .cer, DiagnosticApp.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinEPPFilter-x64-Compiled-Package
+          path: |
+            **/x64/Release/WinEPPFilter/WinEPPFilter.sys
+            **/x64/Release/WinEPPFilter/WinEPPFilter.inf
+            **/x64/Release/WinEPPFilter/WinEPPFilter.cer
+            **/x64/Release/DiagnosticApp/DiagnosticApp.exe
+            **/scripts/install.bat
+            **/scripts/uninstall.bat
