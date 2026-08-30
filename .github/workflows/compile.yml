@@ -22,7 +22,6 @@ jobs:
       - name: Build Driver & Diagnostic App (Release x64)
         shell: powershell
         run: |
-          # Discover latest Windows Kits 10 SDK & KM include directory
           $kitsRoot = "${env:ProgramFiles(x86)}\Windows Kits\10"
           $latestInc = Get-ChildItem -Path "$kitsRoot\Include" -Directory | Sort-Object Name -Descending | Select-Object -First 1
           $kmInc = "$($latestInc.FullName)\km"
@@ -54,7 +53,6 @@ jobs:
           $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WinEPPFilter Test Certificate" -CertStoreLocation "Cert:\CurrentUser\My"
           $certPath = "Cert:\CurrentUser\My\" + $cert.Thumbprint
           
-          # Find output directories
           $sysFiles = Get-ChildItem -Recurse -Filter "WinEPPFilter.sys"
           foreach ($sys in $sysFiles) {
             $destDir = $sys.DirectoryName
