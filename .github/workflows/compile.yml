@@ -19,17 +19,24 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Register WDK Visual Studio Extension & Environment
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Download & Link Official WDK Kernel Headers (ntddk.h, wdf.h)
         shell: powershell
         run: |
-          $vsix = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\Vsix" -Recurse -Filter "WDK.vsix" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($vsix) {
-            Write-Host "Found WDK VSIX at: $($vsix.FullName)"
-            $vsixInstaller = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\VSIXInstaller.exe"
-            if (Test-Path $vsixInstaller) {
-              Start-Process -FilePath $vsixInstaller -ArgumentList "/quiet /admin $($vsix.FullName)" -Wait -NoNewWindow
-              Write-Host "WDK VSIX installed successfully."
-            }
+          # Install official WDK package via NuGet
+          nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory D:\wdk_pkg
+          
+          $wdkInc = Get-ChildItem -Path "D:\wdk_pkg" -Recurse -Filter "ntddk.h" | Select-Object -First 1
+          if ($wdkInc) {
+            $kmDir = $wdkInc.Directory.FullName
+            $sharedDir = (Join-Path (Split-Path $kmDir -Parent) "shared")
+            $wdfDir = (Join-Path (Split-Path $kmDir -Parent) "wdf")
+            Write-Host "Found ntddk.h at: $kmDir"
+            
+            # Export to GitHub Actions environment so MSBuild sees them
+            echo "INCLUDE=$kmDir;$sharedDir;$wdfDir;${env:INCLUDE}" >> $env:GITHUB_ENV
           }
 
       - name: Build Driver & Diagnostic App (Release x64)
